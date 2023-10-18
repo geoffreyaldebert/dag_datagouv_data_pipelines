@@ -234,7 +234,7 @@ def create_edito_post(**kwargs):
             Le suivi des sorties ne constitue que le sommet de l’iceberg de l’activité de data.gouv.fr.
             Pour ne rien manquer de l’actualité de data.gouv.fr et de l’open data,
             <a
-                href="https://f.info.data.gouv.fr/f/lp/infolettre-data-gouv-fr-landing-page/lk3q01y6"
+                href="https://qvo970cr.sibpages.com/"
                 target="_blank"
             >
                 &nbsp;abonnez-vous à notre infolettre
