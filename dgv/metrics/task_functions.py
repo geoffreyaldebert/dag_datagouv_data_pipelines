@@ -18,6 +18,7 @@ from datagouvfr_data_pipelines.config import (
     AIRFLOW_DAG_TMP,
     MINIO_BUCKET_INFRA,
 )
+from datagouvfr_data_pipelines.utils.retry import simple_connection_retry
 from datagouvfr_data_pipelines.utils.download import download_files
 from datagouvfr_data_pipelines.utils.minio import MinIOClient, File as MinioFile
 from datagouvfr_data_pipelines.utils.postgres import (
@@ -538,14 +539,7 @@ def get_matomo_outlinks(
         "period": "day",
         "date": metric_date.isoformat(),
     }
-    tries = 5
-    while tries > 0:
-        matomo_res = requests.get(matomo_url, params=params)
-        # The Matomo API is sometimes unstable and required a few retries
-        if matomo_res.status_code in ["502"]:
-            time.sleep(0.5)
-            tries-=1
-        break
+    matomo_res = requests.get(matomo_url, params=params)
     matomo_res.raise_for_status()
     return sum(
         outlink["nb_hits"]
