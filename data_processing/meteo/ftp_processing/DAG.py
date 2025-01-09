@@ -17,7 +17,7 @@ from datagouvfr_data_pipelines.data_processing.meteo.ftp_processing.task_functio
     upload_new_files,
     handle_updated_files_same_name,
     handle_updated_files_new_name,
-    update_temporal_coverages,
+    update_temporal_coverages_and_sort_resources,
     log_modified_files,
     delete_replaced_minio_files,
     notification_mattermost,
@@ -113,9 +113,9 @@ with DAG(
         python_callable=log_modified_files,
     )
 
-    update_temporal_coverages = PythonOperator(
-        task_id='update_temporal_coverages',
-        python_callable=update_temporal_coverages,
+    update_temporal_coverages_and_sort_resources = PythonOperator(
+        task_id='update_temporal_coverages_and_sort_resources',
+        python_callable=update_temporal_coverages_and_sort_resources,
     )
 
     notification_mattermost = PythonOperator(
@@ -135,14 +135,14 @@ with DAG(
 
     delete_replaced_minio_files.set_upstream(handle_updated_files_new_name)
 
-    update_temporal_coverages.set_upstream(upload_new_files)
-    update_temporal_coverages.set_upstream(handle_updated_files_same_name)
-    update_temporal_coverages.set_upstream(handle_updated_files_new_name)
+    update_temporal_coverages_and_sort_resources.set_upstream(upload_new_files)
+    update_temporal_coverages_and_sort_resources.set_upstream(handle_updated_files_same_name)
+    update_temporal_coverages_and_sort_resources.set_upstream(handle_updated_files_new_name)
 
     log_modified_files.set_upstream(upload_new_files)
     log_modified_files.set_upstream(handle_updated_files_same_name)
     log_modified_files.set_upstream(handle_updated_files_new_name)
 
     notification_mattermost.set_upstream(delete_replaced_minio_files)
-    notification_mattermost.set_upstream(update_temporal_coverages)
+    notification_mattermost.set_upstream(update_temporal_coverages_and_sort_resources)
     notification_mattermost.set_upstream(log_modified_files)

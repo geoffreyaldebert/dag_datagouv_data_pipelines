@@ -1,5 +1,5 @@
 import dateutil
-from typing import TypedDict, Iterator, Optional
+from typing import TypedDict, Iterator, Optional, Callable
 import requests
 from datetime import datetime
 import re
@@ -545,6 +545,33 @@ def post_comment_on_dataset(dataset_id: str, title: str, comment: str) -> reques
     )
     r.raise_for_status()
     return r
+
+
+def title_sort(resources: list[dict]) -> list[dict]:
+    return [{'id': r['id']} for r in sorted(resources, key=lambda r: r['title'])]
+
+
+@simple_connection_retry
+def sort_resources(
+    dataset_id: str,
+    sort_func: Callable = title_sort,
+) -> dict:
+    # sort_func is required to take a list of resources and
+    # return a list of dicts [{'id': resource_id}, ...] in the desired order
+    resources = datagouv_session.get(
+        f"{DATAGOUV_URL}/api/1/datasets/{dataset_id}/",
+    ).json()['resources']
+    sorted_ids = sort_func(resources)
+    if len(sorted_ids) != len(resources):
+        raise ValueError("The sorted list has a different number of elements, aborting")
+    if len(sorted_ids) != len(set(r["id"] for r in sorted_ids)):
+        raise ValueError("An id has been duplicated in the sort process", resources, "vs", sorted_ids)
+    r = datagouv_session.put(
+        f"{DATAGOUV_URL}/api/1/datasets/{dataset_id}/resources/",
+        json=sorted_ids,
+    )
+    r.raise_for_status()
+    return r.json()
 
 
 @simple_connection_retry
