@@ -479,7 +479,7 @@ def post_remote_communautary_resource(
 
     print("Payload content:\n", payload)
     if resource_id:
-        print(f"Updating resource at {dataset_link} from {payload['remote_url']}")
+        print(f"Updating resource at {dataset_link} from {payload['url']}")
         # Update resource
         refined_url = community_resource_url + f"/{resource_id}"
         r = datagouv_session.put(
@@ -488,7 +488,7 @@ def post_remote_communautary_resource(
         )
 
     else:
-        print(f"Creating resource at {dataset_link} from {payload['remote_url']}")
+        print(f"Creating resource at {dataset_link} from {payload['url']}")
         # Create resource
         r = datagouv_session.post(
             community_resource_url,
@@ -567,3 +567,26 @@ def check_duplicated_orga(slug: str) -> tuple[bool, Optional[str]]:
         if test_orga.status_code not in [404, 410]:
             return True, url_dup
     return False, None
+
+
+def check_if_recent_update(
+    reference_resource_id: str,
+    dataset_id: str,
+    on_demo: bool = False,
+) -> bool:
+    """
+    Checks whether any resource of the specified dataset has been update more recently
+    than the specified resource
+    """
+    prefix = "demo" if on_demo else "www"
+    resources = datagouv_session.get(
+        f"https://{prefix}.data.gouv.fr/api/1/datasets/{dataset_id}/",
+        headers={"X-fields": "resources{internal{last_modified_internal}}"}
+    ).json()['resources']
+    lastest_update = datagouv_session.get(
+        f"https://{prefix}.data.gouv.fr/api/2/datasets/resources/{reference_resource_id}/",
+        headers={"X-fields": "internal{last_modified_internal}"}
+    ).json()["internal"]["last_modified_internal"]
+    return any(
+        r["internal"]["last_modified_internal"] > lastest_update for r in resources
+    )

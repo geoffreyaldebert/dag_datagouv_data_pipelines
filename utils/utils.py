@@ -1,5 +1,9 @@
-import duckdb
+import csv
 from datetime import date, datetime
+import gzip
+from typing import Optional
+
+import duckdb
 
 MOIS_FR = {
     "01": "janvier",
@@ -44,23 +48,24 @@ def month_year_iter(start_month, start_year, end_month, end_year):
 
 
 def csv_to_parquet(
-    csv_file_path,
-    dtype=None,
-    columns=None,
-    output_name=None,
-    output_path=None,
-    sep=";",
-    compression="zstd",
+    csv_file_path: str,
+    dtype: Optional[dict] = None,
+    columns: Optional[list] = None,
+    output_name: Optional[str] = None,
+    output_path: Optional[str] = None,
+    sep: str = ";",
+    compression: str = "zstd",
 ):
     """
     if dtype is not specified, columns are required to load everything as string (for safety)
+    for allowed types see https://duckdb.org/docs/sql/data_types/overview.html
     """
     assert dtype is not None or columns is not None
     if output_name is None:
         output_name = csv_file_path.split('/')[-1].replace('.csv', '.parquet')
     if output_path is None:
         output_path = '/'.join(csv_file_path.split('/')[:-1]) + '/'
-    print(f"Saving {csv_file_path}")
+    print(f"Converting {csv_file_path}")
     print(f"to {output_path + output_name}")
     db = duckdb.read_csv(
         csv_file_path,
@@ -68,6 +73,29 @@ def csv_to_parquet(
         dtype=dtype or {c: 'VARCHAR' for c in columns},
     )
     db.write_parquet(output_path + output_name, compression=compression)
+
+
+def csv_to_csvgz(
+    csv_file_path: str,
+    output_name: Optional[str] = None,
+    output_path: Optional[str] = None,
+    chunk_size: int = 1024 * 1024,
+):
+    if output_name is None:
+        output_name = csv_file_path.split('/')[-1].replace('.csv', '.csv.gz')
+    if output_path is None:
+        output_path = '/'.join(csv_file_path.split('/')[:-1]) + '/'
+    print(f"Converting {csv_file_path}")
+    print(f"to {output_path + output_name}")
+    with (
+        open(csv_file_path, 'r', newline='', encoding='utf-8') as csvfile,
+        gzip.open(output_path + output_name, 'wt', newline='', encoding='utf-8') as gzfile
+    ):
+        while True:
+            chunk = csvfile.read(chunk_size)
+            if not chunk:
+                break
+            gzfile.write(chunk)
 
 
 def time_is_between(time1, time2):

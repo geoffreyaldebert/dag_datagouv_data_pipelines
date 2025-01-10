@@ -1,0 +1,77 @@
+{
+    "RESULT": {
+        "csv.gz" : {
+            "dev": {
+                "dataset_id": "5cf8d9ed8b4c4110294c841d",
+                "resource_id": "b1b82209-93c4-4e51-af26-a9a404ba1fe2"
+            },
+            "prod": {
+                "dataset_id": "5cf8d9ed8b4c4110294c841d",
+                "resource_id": "fee50ac3-df62-4b38-aaf5-4831c6ba65c7"
+            }
+        },
+        "parquet" : {
+            "dev": {
+                "dataset_id": "5cf8d9ed8b4c4110294c841d",
+                "resource_id": "97cf8671-ec7f-4e33-a108-d22c33107970"
+            },
+            "prod": {
+                "dataset_id": "5cf8d9ed8b4c4110294c841d",
+                "resource_id": "50f3cd73-4ce5-4c04-a45c-f883aae389be"
+            }
+        },
+        "dtype": {
+            "cdparametre": "INT32"
+        }
+    },
+    "COM_UDI": {
+        "csv" : {
+            "dev": {
+                "dataset_id": "5cf8d9ed8b4c4110294c841d",
+                "resource_id": "97c7e4ee-d5be-4709-b255-c4506aa42bff"
+            },
+            "prod": {
+                "dataset_id": "5cf8d9ed8b4c4110294c841d",
+                "resource_id": "457da169-3c92-47e1-8822-e727665f3ac2"
+            }
+        },
+        "parquet": {
+            "dev": {
+                "dataset_id": "5cf8d9ed8b4c4110294c841d",
+                "resource_id": "fffd9023-107c-4ed3-a187-e2038a9c35ff"
+            },
+            "prod": {
+                "dataset_id": "5cf8d9ed8b4c4110294c841d",
+                "resource_id": "211c23ea-60eb-4b3f-9000-ae319c16cfc9"
+            }
+        },
+        "dtype": {
+            "debutalim": "DATE"
+        }
+    },
+    "PLV": {
+        "csv" : {
+            "dev": {
+                "dataset_id": "5cf8d9ed8b4c4110294c841d",
+                "resource_id": "2a0605b7-72dd-4529-a0d4-73a471a5cc87"
+            },
+            "prod": {
+                "dataset_id": "5cf8d9ed8b4c4110294c841d",
+                "resource_id": "1f284e4f-bcc1-47aa-a00e-38da45b0c3b2"
+            }
+        },
+        "parquet": {
+            "dev": {
+                "dataset_id": "5cf8d9ed8b4c4110294c841d",
+                "resource_id": "cacb4bf4-7bff-4c57-8c62-850bdc37be83"
+            },
+            "prod": {
+                "dataset_id": "5cf8d9ed8b4c4110294c841d",
+                "resource_id": "dd0f0c3a-49dc-4627-8d13-65b463041500"
+            }
+        },
+        "dtype": {
+            "dateprel": "DATE"
+        }
+    }
+}

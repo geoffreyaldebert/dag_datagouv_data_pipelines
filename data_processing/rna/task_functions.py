@@ -14,6 +14,7 @@ from datagouvfr_data_pipelines.config import (
 )
 from datagouvfr_data_pipelines.utils.datagouv import (
     post_remote_resource,
+    check_if_recent_update,
     DATAGOUV_URL,
 )
 from datagouvfr_data_pipelines.utils.mattermost import send_message
@@ -23,25 +24,15 @@ from datagouvfr_data_pipelines.utils.utils import csv_to_parquet, MOIS_FR
 DAG_FOLDER = "datagouvfr_data_pipelines/data_processing/"
 DATADIR = f"{AIRFLOW_DAG_TMP}rna"
 minio_open = MinIOClient(bucket=MINIO_BUCKET_DATA_PIPELINE_OPEN)
+with open(f"{AIRFLOW_DAG_HOME}{DAG_FOLDER}rna/config/dgv.json") as fp:
+    config = json.load(fp)
 
 
 def check_if_modif():
-    with open(f"{AIRFLOW_DAG_HOME}{DAG_FOLDER}rna/config/dgv.json") as fp:
-        config = json.load(fp)
-    resources = requests.get(
-        'https://www.data.gouv.fr/api/1/datasets/58e53811c751df03df38f42d/',
-        headers={"X-fields": "resources{internal{last_modified_internal}}"}
-    ).json()['resources']
-    # we consider one arbitrary resource of the target dataset
-    lastest_update = requests.get(
-        (
-            f'{DATAGOUV_URL}/api/1/datasets/{config["import"]["csv"][AIRFLOW_ENV]["dataset_id"]}/'
-            f'resources/{config["import"]["csv"][AIRFLOW_ENV]["resource_id"]}/'
-        ),
-        headers={"X-fields": "internal{last_modified_internal}"}
-    ).json()["internal"]["last_modified_internal"]
-    return any(
-        r["internal"]["last_modified_internal"] > lastest_update for r in resources
+    return check_if_recent_update(
+        reference_resource_id=config["import"]["csv"][AIRFLOW_ENV]["resource_id"],
+        dataset_id="58e53811c751df03df38f42d",
+        on_demo=AIRFLOW_ENV == "dev",
     )
 
 
@@ -116,8 +107,6 @@ def publish_on_datagouv(ti, file_type):
     latest = ti.xcom_pull(key="latest", task_ids=f"process_rna_{file_type}")
     y, m, d = latest[:4], latest[4:6], latest[6:]
     date = f"{d} {MOIS_FR[m]} {y}"
-    with open(f"{AIRFLOW_DAG_HOME}{DAG_FOLDER}rna/config/dgv.json") as fp:
-        config = json.load(fp)
     for ext in ["csv", "parquet"]:
         post_remote_resource(
             dataset_id=config[file_type][ext][AIRFLOW_ENV]["dataset_id"],
@@ -142,8 +131,6 @@ def publish_on_datagouv(ti, file_type):
 
 
 def send_notification_mattermost():
-    with open(f"{AIRFLOW_DAG_HOME}{DAG_FOLDER}rna/config/dgv.json") as fp:
-        config = json.load(fp)
     dataset_id = config["import"]["csv"][AIRFLOW_ENV]["dataset_id"]
     send_message(
         text=(

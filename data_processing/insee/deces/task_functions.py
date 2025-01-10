@@ -16,6 +16,7 @@ from datagouvfr_data_pipelines.utils.minio import MinIOClient
 from datagouvfr_data_pipelines.utils.datagouv import (
     post_remote_resource,
     update_dataset_or_resource_metadata,
+    check_if_recent_update,
     DATAGOUV_URL,
 )
 from datagouvfr_data_pipelines.utils.mattermost import send_message
@@ -23,24 +24,15 @@ from datagouvfr_data_pipelines.utils.mattermost import send_message
 DAG_FOLDER = "datagouvfr_data_pipelines/data_processing/"
 DATADIR = f"{AIRFLOW_DAG_TMP}deces"
 minio_open = MinIOClient(bucket=MINIO_BUCKET_DATA_PIPELINE_OPEN)
+with open(f"{AIRFLOW_DAG_HOME}{DAG_FOLDER}insee/deces/config/dgv.json") as fp:
+    config = json.load(fp)
 
 
 def check_if_modif():
-    with open(f"{AIRFLOW_DAG_HOME}{DAG_FOLDER}insee/deces/config/dgv.json") as fp:
-        config = json.load(fp)
-    resources = requests.get(
-        'https://www.data.gouv.fr/api/1/datasets/5de8f397634f4164071119c5/',
-        headers={"X-fields": "resources{internal{last_modified_internal}}"}
-    ).json()['resources']
-    lastest_update = requests.get(
-        (
-            f'{DATAGOUV_URL}/api/1/datasets/{config["deces_csv"][AIRFLOW_ENV]["dataset_id"]}/'
-            f'resources/{config["deces_csv"][AIRFLOW_ENV]["resource_id"]}/'
-        ),
-        headers={"X-fields": "internal{last_modified_internal}"}
-    ).json()["internal"]["last_modified_internal"]
-    return any(
-        r["internal"]["last_modified_internal"] > lastest_update for r in resources
+    return check_if_recent_update(
+        reference_resource_id=config["deces_csv"][AIRFLOW_ENV]["resource_id"],
+        dataset_id="5de8f397634f4164071119c5",
+        on_demo=AIRFLOW_ENV == "dev",
     )
 
 
@@ -206,8 +198,6 @@ def send_to_minio():
 def publish_on_datagouv(ti):
     min_date = ti.xcom_pull(key="min_date", task_ids="gather_data")
     max_date = ti.xcom_pull(key="max_date", task_ids="gather_data")
-    with open(f"{AIRFLOW_DAG_HOME}{DAG_FOLDER}insee/deces/config/dgv.json") as fp:
-        config = json.load(fp)
     for _ext in ["csv", "parquet"]:
         post_remote_resource(
             dataset_id=config[f"deces_{_ext}"][AIRFLOW_ENV]["dataset_id"],
@@ -242,9 +232,7 @@ def publish_on_datagouv(ti):
 
 
 def notification_mattermost():
-    with open(f"{AIRFLOW_DAG_HOME}{DAG_FOLDER}insee/deces/config/dgv.json") as fp:
-        data = json.load(fp)
-    dataset_id = data["deces_csv"][AIRFLOW_ENV]["dataset_id"]
+    dataset_id = config["deces_csv"][AIRFLOW_ENV]["dataset_id"]
     send_message(
         f"Données décès agrégées :"
         f"\n- uploadées sur Minio"
