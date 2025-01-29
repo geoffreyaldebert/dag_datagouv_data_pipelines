@@ -1,0 +1,22 @@
+{
+    "csv" : {
+        "dev": {
+            "dataset_id": "53699569a3a729239d2046eb",
+            "resource_id": "3214c46b-cb5d-4233-9e39-f2169bfc0d93"
+        },
+        "prod": {
+            "dataset_id": "53699569a3a729239d2046eb",
+            "resource_id": ""
+        }
+    },
+    "parquet" : {
+        "dev": {
+            "dataset_id": "53699569a3a729239d2046eb",
+            "resource_id": "3ddc55c2-6421-4244-8b99-a8b26fa01fcc"
+        },
+        "prod": {
+            "dataset_id": "53699569a3a729239d2046eb",
+            "resource_id": ""
+        }
+    }
+}
