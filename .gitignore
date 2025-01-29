@@ -4,3 +4,4 @@ __pycache__/
 schema/tmp/
 .DS_Store
 .pre-commit-config.yaml
+local-tmp/
