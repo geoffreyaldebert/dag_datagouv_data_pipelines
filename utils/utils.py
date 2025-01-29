@@ -1,4 +1,3 @@
-import csv
 from datetime import date, datetime
 import gzip
 from typing import Optional
@@ -62,15 +61,15 @@ def csv_to_parquet(
     """
     assert dtype is not None or columns is not None
     if output_name is None:
-        output_name = csv_file_path.split('/')[-1].replace('.csv', '.parquet')
+        output_name = csv_file_path.split("/")[-1].replace(".csv", ".parquet")
     if output_path is None:
-        output_path = '/'.join(csv_file_path.split('/')[:-1]) + '/'
+        output_path = "/".join(csv_file_path.split("/")[:-1]) + "/"
     print(f"Converting {csv_file_path}")
     print(f"to {output_path + output_name}")
     db = duckdb.read_csv(
         csv_file_path,
         sep=sep,
-        dtype=dtype or {c: 'VARCHAR' for c in columns},
+        dtype=dtype or {c: "VARCHAR" for c in columns},
     )
     db.write_parquet(output_path + output_name, compression=compression)
 
@@ -82,14 +81,16 @@ def csv_to_csvgz(
     chunk_size: int = 1024 * 1024,
 ):
     if output_name is None:
-        output_name = csv_file_path.split('/')[-1].replace('.csv', '.csv.gz')
+        output_name = csv_file_path.split("/")[-1].replace(".csv", ".csv.gz")
     if output_path is None:
-        output_path = '/'.join(csv_file_path.split('/')[:-1]) + '/'
+        output_path = "/".join(csv_file_path.split("/")[:-1]) + "/"
     print(f"Converting {csv_file_path}")
     print(f"to {output_path + output_name}")
     with (
-        open(csv_file_path, 'r', newline='', encoding='utf-8') as csvfile,
-        gzip.open(output_path + output_name, 'wt', newline='', encoding='utf-8') as gzfile
+        open(csv_file_path, "r", newline="", encoding="utf-8") as csvfile,
+        gzip.open(
+            output_path + output_name, "wt", newline="", encoding="utf-8"
+        ) as gzfile,
     ):
         while True:
             chunk = csvfile.read(chunk_size)
@@ -103,3 +104,19 @@ def time_is_between(time1, time2):
     if time1 > time2:
         time1, time2 = time2, time1
     return time1 <= datetime.now().time() <= time2
+
+
+def get_unique_list(*lists: list[str]) -> list[str]:
+    """
+    Returns a list of unique string elements from multiple input lists.
+
+    Args:
+        *lists (List[str]): An arbitrary number of string lists of elements.
+
+    Returns:
+        list[str]: The list with unique elements in no particular order.
+    """
+    unique_elements = set()
+    for lst in lists:
+        unique_elements.update(lst)
+    return list(unique_elements)
