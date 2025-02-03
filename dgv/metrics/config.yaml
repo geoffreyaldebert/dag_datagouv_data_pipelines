@@ -1,0 +1,62 @@
+database_schema: "metric"
+# Segments are the first url element we would like to track
+# Such as: https://www.data.gouv.fr/<segment>/
+# They need to match the postgres tables columns
+api_segments:
+  - "api/1"
+  - "api/2"
+web_segments:
+  - "fr"
+  - "en"
+  - "es"
+# DATAGOUVFR_RGS: service behind the RGS certificate so
+# this is production www.data.gouv.fr
+# This pattern is appended before any other
+global_pattern: " DATAGOUVFR_RGS~ .* (?:200|302) .* \"GET .*"
+datagouv_logs:
+  - type: resources
+    catalog_resource_id: 4babf5f2-6a9c-45b5-9144-ca5eae6a7a6d
+    catalog_columns:
+    # original_column: renamed_column
+      url: url
+      id: resource_id
+      dataset.id: dataset_id
+      dataset.organization_id: organization_id
+    static_segments:
+      - "static_resource"
+    additional_patterns:
+      fr: /fr/datasets/r/([^/?\s]*)
+      en: /en/datasets/r/([^/?\s]*)
+      es: /es/datasets/r/([^/?\s]*)
+      api1: /api/1/datasets/.*/resources/([^/?\s]*)
+      api2: /api/2/datasets/.*/resources/([^/?\s]*)
+      static_resource: "(?:https://static\\.data\\.gouv\\.fr)?/resources/([^?\\s]*)"
+
+  - type: datasets
+    # Any datagouv_logs elements has a default pattern
+    # per segment, looking like: /fr/datasets/..
+    catalog_resource_id: f868cca6-8da1-4369-a78d-47463f19a9a3
+    catalog_columns:
+      slug: slug
+      id: dataset_id
+      organization_id: organization_id
+
+  - type: organizations
+    catalog_resource_id: b7bbfedc-2448-4135-a6c7-104548d396e7
+    catalog_columns:
+      slug: slug
+      id: organization_id
+
+  - type: reuses
+    catalog_resource_id: 970aafa0-3778-4d8b-b9d1-de937525e379
+    catalog_columns:
+      slug: slug
+      id: reuse_id
+      organization_id: organization_id
+
+  - type: dataservices
+    catalog_resource_id: 322d1475-f36a-472d-97ce-d218c8f79092
+    catalog_columns:
+      slug: slug
+      id: dataservice_id
+      organization_id: organization_id

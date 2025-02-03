@@ -1,6 +1,7 @@
-import psycopg2
-from typing import List, TypedDict, Optional
 import os
+from typing import List, TypedDict, Optional
+
+import psycopg2
 
 
 class File(TypedDict):
@@ -11,18 +12,18 @@ class File(TypedDict):
 
 
 def get_conn(
-    PG_HOST: str,
-    PG_PORT: str,
-    PG_DB: str,
-    PG_USER: str,
+    PG_HOST: Optional[str],
+    PG_PORT: Optional[int],
+    PG_DB: Optional[str],
+    PG_USER: Optional[str],
     PG_PASSWORD: str,
-    PG_SCHEMA: str,
+    PG_SCHEMA: Optional[str],
 ):
     """Get connection to postgres instance
 
     Args:
         PG_HOST (str): host
-        PG_PORT (str): port
+        PG_PORT (int): port
         PG_DB (str): db / schema
         PG_USER (str): user
         PG_PASSWORD (str): password
@@ -40,7 +41,7 @@ def get_conn(
         user=PG_USER,
         password=PG_PASSWORD,
         port=PG_PORT,
-        options=f"-c search_path={PG_SCHEMA}"
+        options=f"-c search_path={PG_SCHEMA}",
     )
     return conn
 
@@ -57,7 +58,7 @@ def return_sql_results(cur):
     """
     try:
         data = cur.fetchall()
-    except:
+    except Exception:
         data = None
     if data:
         columns = [desc[0] for desc in cur.description]
@@ -67,10 +68,10 @@ def return_sql_results(cur):
 
 
 def execute_query(
-    PG_HOST: str,
-    PG_PORT: str,
-    PG_DB: str,
-    PG_USER: str,
+    PG_HOST: Optional[str],
+    PG_PORT: Optional[int],
+    PG_DB: Optional[str],
+    PG_USER: Optional[str],
     PG_PASSWORD: str,
     sql: str,
     PG_SCHEMA: Optional[str] = None,
@@ -99,10 +100,10 @@ def execute_query(
 
 
 def execute_sql_file(
-    PG_HOST: str,
-    PG_PORT: str,
-    PG_DB: str,
-    PG_USER: str,
+    PG_HOST: Optional[str],
+    PG_PORT: Optional[int],
+    PG_DB: Optional[str],
+    PG_USER: Optional[str],
     PG_PASSWORD: str,
     list_files: List[File],
     PG_SCHEMA: Optional[str] = None,
@@ -147,11 +148,11 @@ def execute_sql_file(
 
 
 def copy_file(
-    PG_HOST: str,
-    PG_PORT: str,
-    PG_DB: str,
-    PG_TABLE: str,
-    PG_USER: str,
+    PG_HOST: Optional[str],
+    PG_PORT: Optional[int],
+    PG_DB: Optional[str],
+    PG_TABLE: Optional[str],
+    PG_USER: Optional[str],
     PG_PASSWORD: str,
     list_files: List[File],
     PG_SCHEMA: Optional[str] = None,
@@ -161,7 +162,7 @@ def copy_file(
 
     Args:
         PG_HOST (str): host
-        PG_PORT (str): port
+        PG_PORT (int): port
         PG_DB (str): db / schema
         PG_TABLE (str): table to upload data
         PG_USER (str): user
@@ -177,7 +178,9 @@ def copy_file(
         _type_: _description_
     """
     for file_conf in list_files:
-        is_file = os.path.isfile(os.path.join(file_conf["source_path"], file_conf["source_name"]))
+        is_file = os.path.isfile(
+            os.path.join(file_conf["source_path"], file_conf["source_name"])
+        )
         if is_file:
             conn = get_conn(PG_HOST, PG_PORT, PG_DB, PG_USER, PG_PASSWORD, PG_SCHEMA)
             if "column_order" in file_conf and file_conf["column_order"] is not None:

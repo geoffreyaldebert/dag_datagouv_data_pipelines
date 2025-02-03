@@ -1,3 +1,4 @@
+import logging
 import boto3
 import botocore
 from minio import Minio, S3Error
@@ -28,9 +29,9 @@ class File(TypedDict):
 class MinIOClient:
     def __init__(
         self,
-        bucket: str = None,
-        user: str = None,
-        pwd: str = None,
+        bucket: Optional[str] = None,
+        user: Optional[str] = None,
+        pwd: Optional[str] = None,
         login: bool = True,
         http_client=None,
     ):
@@ -85,10 +86,10 @@ class MinIOClient:
                     self.bucket,
                     dest_path,
                     os.path.join(file["source_path"], file["source_name"]),
-                    content_type=file.get('content_type') or magic.from_file(
+                    content_type=file.get("content_type") or magic.from_file(
                         os.path.join(file["source_path"], file["source_name"]),
-                        mime=True
-                    )
+                        mime=True,
+                    ),
                 )
                 if burn_after_sending:
                     os.remove(os.path.join(file["source_path"], file["source_name"]))
@@ -120,7 +121,9 @@ class MinIOClient:
             if ignore_airflow_env:
                 source_path = f"{file['source_path']}{file['source_name']}"
             else:
-                source_path = f"{AIRFLOW_ENV}/{file['source_path']}{file['source_name']}"
+                source_path = (
+                    f"{AIRFLOW_ENV}/{file['source_path']}{file['source_name']}"
+                )
             self.client.fget_object(
                 self.bucket,
                 source_path,
@@ -180,7 +183,7 @@ class MinIOClient:
             return bool(file_1["ETag"] == file_2["ETag"])
 
         except botocore.exceptions.ClientError as e:
-            print('Error loading files:', e)
+            print("Error loading files:", e)
             return None
 
     @simple_connection_retry
@@ -203,7 +206,9 @@ class MinIOClient:
         list_objects = []
         if not ignore_airflow_env:
             prefix = f"{AIRFLOW_ENV}/{prefix}"
-        objects = self.client.list_objects(self.bucket, prefix=prefix, recursive=recursive)
+        objects = self.client.list_objects(
+            self.bucket, prefix=prefix, recursive=recursive
+        )
         for obj in objects:
             # print(obj.object_name)
             list_objects.append(obj.object_name.replace(f"{AIRFLOW_ENV}/", ""))
@@ -212,40 +217,86 @@ class MinIOClient:
     @simple_connection_retry
     def copy_object(
         self,
-        MINIO_BUCKET_SOURCE: str,
-        MINIO_BUCKET_TARGET: str,
         path_source: str,
         path_target: str,
-        remove_source_file: bool,
-    ):
+        minio_bucket_source: Optional[str] = None,
+        minio_bucket_target: Optional[str] = None,
+        remove_source_file: bool = False,
+    ) -> None:
         """Copy and paste file to another folder.
 
         Args:
-            MINIO_BUCKET_SOURCE (str): bucket source
-            MINIO_BUCKET_TARGET (str): bucket target
-            path_source: path of source file
-            path_target: path of target file
-            remove_source_file: (bool): remove or not source file
+            path_source (str): Path of source file
+            path_target (str): Path of target file
+            minio_bucket_source (str, optional): Source bucket. Defaults to the bucket specified at init.
+            minio_bucket_target (str, optional): Target bucket. Defaults to the bucket specified at init.
+            remove_source_file: (bool): Remove or not the source file after the copy. Default is False
 
         Raises:
             Exception: _description_
         """
+        if not minio_bucket_source:
+            minio_bucket_source = self.bucket
+        if not minio_bucket_target:
+            minio_bucket_target = self.bucket
+
         if (
-            self.client.bucket_exists(MINIO_BUCKET_SOURCE)
-            and self.client.bucket_exists(MINIO_BUCKET_TARGET)
+            self.client.bucket_exists(minio_bucket_source)
+            and self.client.bucket_exists(minio_bucket_target)
         ):
             # copy an object from a bucket to another.
-            print(MINIO_BUCKET_SOURCE)
-            print(f"{AIRFLOW_ENV}/{path_source}")
+            logging.info(
+                f"{'Move' if remove_source_file else 'Copy'} {minio_bucket_source}/{AIRFLOW_ENV}/{path_source}"
+            )
             self.client.copy_object(
-                MINIO_BUCKET_SOURCE,
+                minio_bucket_source,
                 f"{AIRFLOW_ENV}/{path_target}",
-                CopySource(MINIO_BUCKET_TARGET, f"{AIRFLOW_ENV}/{path_source}"),
+                CopySource(minio_bucket_target, f"{AIRFLOW_ENV}/{path_source}"),
             )
             if remove_source_file:
-                self.client.remove_object(MINIO_BUCKET_SOURCE, f"{AIRFLOW_ENV}/{path_source}")
+                self.client.remove_object(
+                    minio_bucket_source, f"{AIRFLOW_ENV}/{path_source}"
+                )
+            logging.info(f"> to {minio_bucket_source}/{AIRFLOW_ENV}/{path_target}")
         else:
-            raise Exception("One Bucket does not exists")
+            raise ValueError(
+                f"One bucket does not exist: {minio_bucket_source} or {minio_bucket_target}"
+            )
+
+    def copy_many_objects(
+        self,
+        obj_source_paths: list[str],
+        target_directory: str,
+        minio_bucket_source: Optional[str] = None,
+        minio_bucket_target: Optional[str] = None,
+        remove_source_file: bool = False,
+    ) -> list[str]:
+        """
+        Copy multiple objects from a source folder to a target folder in MinIO.
+
+        Args:
+            obj_source_paths (list[str]): List of the objects full paths to be copied.
+            target_path (str): The target directory where the objects will be copied.
+            minio_bucket_source (Optional[str]): The source MinIO bucket name. Defaults to the bucket specified at init.
+            minio_bucket_target (Optional[str]): The target MinIO bucket name. Defaults to the bucket specified at init.
+            remove_source_file (bool): If True, removes the source files after copying. Defaults to False.
+
+        Returns:
+            list[str]: List of the new objects paths.
+        """
+        files_destination_path = []
+        for source_path in obj_source_paths:
+            source_file = os.path.basename(source_path)
+            target_path = target_directory + source_file
+            self.copy_object(
+                path_source=source_path,
+                path_target=target_path,
+                minio_bucket_source=minio_bucket_source,
+                minio_bucket_target=minio_bucket_target,
+                remove_source_file=remove_source_file,
+            )
+            files_destination_path.append(target_path)
+        return files_destination_path
 
     @simple_connection_retry
     def get_all_files_names_and_sizes_from_parent_folder(
@@ -257,13 +308,18 @@ class MinIOClient:
         """
         if self.bucket is None:
             raise AttributeError("A bucket has to be specified.")
-        objects = {o.object_name: o for o in self.client.list_objects(self.bucket, prefix=folder)}
-        files = {k: v.size for k, v in objects.items() if '.' in k}
+        objects = {
+            o.object_name: o
+            for o in self.client.list_objects(self.bucket, prefix=folder)
+        }
+        files = {k: v.size for k, v in objects.items() if "." in k}
         subfolders = [k for k in objects.keys() if k not in files.keys()]
         for subf in subfolders:
-            files.update(self.get_all_files_names_and_sizes_from_parent_folder(
-                folder=subf,
-            ))
+            files.update(
+                self.get_all_files_names_and_sizes_from_parent_folder(
+                    folder=subf,
+                )
+            )
         return files
 
     @simple_connection_retry
